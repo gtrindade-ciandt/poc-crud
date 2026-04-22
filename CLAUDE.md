@@ -91,20 +91,21 @@ We follow **Conventional Commits**:
 
 ### Accepted types
 
-| Type       | When to use                            |
-| ---------- | -------------------------------------- |
-| `feat`     | New feature                            |
-| `fix`      | Bug fix                                |
-| `refactor` | Refactor without behavior change       |
-| `test`     | Add or fix tests                       |
-| `chore`    | Build, dependencies, config            |
-| `docs`     | Documentation only                     |
-| `style`    | Formatting, no logic change            |
-| `perf`     | Performance improvement                |
-| `ci`       | CI/CD changes                          |
+| Type       | When to use                      |
+| ---------- | -------------------------------- |
+| `feat`     | New feature                      |
+| `fix`      | Bug fix                          |
+| `refactor` | Refactor without behavior change |
+| `test`     | Add or fix tests                 |
+| `chore`    | Build, dependencies, config      |
+| `docs`     | Documentation only               |
+| `style`    | Formatting, no logic change      |
+| `perf`     | Performance improvement          |
+| `ci`       | CI/CD changes                    |
 
 ### Rules
 
+- **Small, atomic commits** — each commit should contain a single logical change (one feature, one fix, one refactor). Never bundle unrelated changes in the same commit
 - Description in **English**, imperative mood, no period at end
 - Optional scope in parentheses: `feat(table)`, `fix(api)`, `test(repo-table)`
 - Breaking change commits: add `!` after type or `BREAKING CHANGE:` in footer
