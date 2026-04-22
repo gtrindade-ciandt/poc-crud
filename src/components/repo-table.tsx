@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -6,85 +6,85 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Star, GitFork, Eye, ExternalLink } from "lucide-react"
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Star, GitFork, Eye, ExternalLink } from 'lucide-react';
 
 interface GitHubRepo {
-  id: number
-  name: string
-  full_name: string
-  description: string | null
-  html_url: string
-  language: string | null
-  stargazers_count: number
-  forks_count: number
-  watchers_count: number
-  open_issues_count: number
-  updated_at: string
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  html_url: string;
+  language: string | null;
+  stargazers_count: number;
+  forks_count: number;
+  watchers_count: number;
+  open_issues_count: number;
+  updated_at: string;
   owner: {
-    avatar_url: string
-    login: string
-  }
+    avatar_url: string;
+    login: string;
+  };
 }
 
 const languageColors: Record<string, string> = {
-  TypeScript: "bg-blue-500",
-  JavaScript: "bg-yellow-400",
-  Python: "bg-green-500",
-  Rust: "bg-orange-600",
-  Go: "bg-cyan-500",
-  Java: "bg-red-500",
-  Ruby: "bg-red-400",
-  C: "bg-gray-500",
-  "C++": "bg-pink-500",
-  "C#": "bg-purple-500",
-  Swift: "bg-orange-400",
-  Kotlin: "bg-purple-400",
-  Shell: "bg-green-400",
-  HTML: "bg-orange-500",
-  CSS: "bg-purple-300",
-  Dart: "bg-teal-400",
-  PHP: "bg-indigo-400",
-}
+  TypeScript: 'bg-blue-500',
+  JavaScript: 'bg-yellow-400',
+  Python: 'bg-green-500',
+  Rust: 'bg-orange-600',
+  Go: 'bg-cyan-500',
+  Java: 'bg-red-500',
+  Ruby: 'bg-red-400',
+  C: 'bg-gray-500',
+  'C++': 'bg-pink-500',
+  'C#': 'bg-purple-500',
+  Swift: 'bg-orange-400',
+  Kotlin: 'bg-purple-400',
+  Shell: 'bg-green-400',
+  HTML: 'bg-orange-500',
+  CSS: 'bg-purple-300',
+  Dart: 'bg-teal-400',
+  PHP: 'bg-indigo-400',
+};
 
 function formatNumber(num: number): string {
   if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}k`
+    return `${(num / 1000).toFixed(1)}k`;
   }
-  return num.toString()
+  return num.toString();
 }
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export function RepoTable() {
-  const [repos, setRepos] = useState<GitHubRepo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [repos, setRepos] = useState<GitHubRepo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("https://api.github.com/orgs/anthropics/repos?sort=stars&per_page=30")
+    fetch('https://api.github.com/orgs/anthropics/repos?sort=stars&per_page=30')
       .then((res) => {
-        if (!res.ok) throw new Error(`GitHub API error: ${res.status}`)
-        return res.json()
+        if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+        return res.json();
       })
       .then((data: GitHubRepo[]) => {
-        setRepos(data.sort((a, b) => b.stargazers_count - a.stargazers_count))
-        setLoading(false)
+        setRepos(data.sort((a, b) => b.stargazers_count - a.stargazers_count));
+        setLoading(false);
       })
       .catch((err: Error) => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [])
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   if (error) {
     return (
@@ -92,7 +92,7 @@ export function RepoTable() {
         <p className="text-destructive font-medium">Erro ao carregar repositorios</p>
         <p className="text-sm text-muted-foreground mt-1">{error}</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -120,13 +120,27 @@ export function RepoTable() {
             {loading
               ? Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-60" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-10 ml-auto" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-10 ml-auto" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-10 ml-auto" /></TableCell>
-                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-40" />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Skeleton className="h-5 w-60" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-16" />
+                    </TableCell>
+                    <TableCell>
+                      <Skeleton className="h-5 w-10 ml-auto" />
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Skeleton className="h-5 w-10 ml-auto" />
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <Skeleton className="h-5 w-10 ml-auto" />
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <Skeleton className="h-5 w-20" />
+                    </TableCell>
                   </TableRow>
                 ))
               : repos.map((repo) => (
@@ -151,7 +165,7 @@ export function RepoTable() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <span className="text-muted-foreground text-sm line-clamp-1">
-                        {repo.description || "Sem descricao"}
+                        {repo.description || 'Sem descricao'}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -159,7 +173,7 @@ export function RepoTable() {
                         <Badge variant="secondary" className="gap-1.5 text-xs">
                           <span
                             className={`h-2 w-2 rounded-full ${
-                              languageColors[repo.language] || "bg-gray-400"
+                              languageColors[repo.language] || 'bg-gray-400'
                             }`}
                           />
                           {repo.language}
@@ -193,7 +207,7 @@ export function RepoTable() {
 
       {!loading && (
         <p className="text-xs text-muted-foreground text-center">
-          Mostrando {repos.length} de {repos.length} repositorios da org{" "}
+          Mostrando {repos.length} de {repos.length} repositorios da org{' '}
           <a
             href="https://github.com/anthropics"
             target="_blank"
@@ -205,5 +219,5 @@ export function RepoTable() {
         </p>
       )}
     </div>
-  )
+  );
 }

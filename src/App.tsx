@@ -1,5 +1,5 @@
-import { RepoTable } from "@/components/repo-table"
-import { GitBranch } from "lucide-react"
+import { RepoTable } from '@/components/repo-table';
+import { GitBranch } from 'lucide-react';
 
 function App() {
   return (
@@ -11,12 +11,8 @@ function App() {
               <GitBranch className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground">
-                GitHub Explorer
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Repositorios populares da Anthropic
-              </p>
+              <h1 className="text-xl font-bold tracking-tight text-foreground">GitHub Explorer</h1>
+              <p className="text-sm text-muted-foreground">Repositorios populares da Anthropic</p>
             </div>
           </div>
         </div>
@@ -34,7 +30,7 @@ function App() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
