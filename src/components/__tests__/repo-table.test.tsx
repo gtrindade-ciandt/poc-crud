@@ -283,10 +283,7 @@ describe('RepoTable', () => {
 
       const avatars = await screen.findAllByRole('img', { name: 'anthropics' });
       expect(avatars).toHaveLength(2);
-      expect(avatars[0]).toHaveAttribute(
-        'src',
-        'https://avatars.githubusercontent.com/u/123'
-      );
+      expect(avatars[0]).toHaveAttribute('src', 'https://avatars.githubusercontent.com/u/123');
     });
   });
 

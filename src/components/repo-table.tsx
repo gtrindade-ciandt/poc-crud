@@ -81,12 +81,12 @@ export function RepoTable() {
 
   const languages = useMemo(
     () => [...new Set(repos.map((r) => r.language).filter(Boolean))].sort() as string[],
-    [repos],
+    [repos]
   );
 
   const filteredRepos = useMemo(
     () => (selectedLanguage ? repos.filter((r) => r.language === selectedLanguage) : repos),
-    [repos, selectedLanguage],
+    [repos, selectedLanguage]
   );
 
   useEffect(() => {
