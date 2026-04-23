@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -9,6 +9,13 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Star, GitFork, Eye, ExternalLink } from 'lucide-react';
 
 interface GitHubRepo {
@@ -70,6 +77,18 @@ export function RepoTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+
+  const languages = useMemo(
+    () => [...new Set(repos.map((r) => r.language).filter(Boolean))].sort() as string[],
+    [repos]
+  );
+
+  const filteredRepos = useMemo(
+    () => (selectedLanguage ? repos.filter((r) => r.language === selectedLanguage) : repos),
+    [repos, selectedLanguage]
+  );
+
   useEffect(() => {
     fetch('https://api.github.com/orgs/anthropics/repos?sort=stars&per_page=30')
       .then((res) => {
@@ -97,6 +116,29 @@ export function RepoTable() {
 
   return (
     <div className="space-y-4">
+      {!loading && !error && (
+        <Select
+          value={selectedLanguage ?? 'all'}
+          onValueChange={(value) => setSelectedLanguage(value === 'all' ? null : value)}
+        >
+          <SelectTrigger className="w-full sm:w-[220px]" aria-label="Filtrar por linguagem">
+            <SelectValue placeholder="Todas as linguagens" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as linguagens</SelectItem>
+            {languages.map((lang) => (
+              <SelectItem key={lang} value={lang}>
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 rounded-full ${languageColors[lang] || 'bg-gray-400'}`}
+                  />
+                  {lang}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
@@ -143,7 +185,7 @@ export function RepoTable() {
                     </TableCell>
                   </TableRow>
                 ))
-              : repos.map((repo) => (
+              : filteredRepos.map((repo) => (
                   <TableRow key={repo.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -194,7 +236,7 @@ export function RepoTable() {
                     </TableCell>
                   </TableRow>
                 ))}
-            {!loading && repos.length === 0 && (
+            {!loading && filteredRepos.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Nenhum repositorio encontrado.
@@ -207,7 +249,7 @@ export function RepoTable() {
 
       {!loading && (
         <p className="text-xs text-muted-foreground text-center">
-          Mostrando {repos.length} de {repos.length} repositorios da org{' '}
+          Mostrando {filteredRepos.length} de {repos.length} repositorios da org{' '}
           <a
             href="https://github.com/anthropics"
             target="_blank"
