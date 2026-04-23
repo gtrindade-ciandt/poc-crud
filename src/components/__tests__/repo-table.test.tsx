@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RepoTable } from '@/components/repo-table';
 
@@ -39,6 +40,65 @@ const mockRepos = [
   },
 ];
 
+const mockReposWithLanguages = [
+  {
+    id: 1,
+    name: 'claude-code',
+    full_name: 'anthropics/claude-code',
+    description: 'CLI tool for Claude',
+    html_url: 'https://github.com/anthropics/claude-code',
+    language: 'TypeScript',
+    stargazers_count: 25000,
+    forks_count: 1200,
+    watchers_count: 25000,
+    open_issues_count: 50,
+    updated_at: '2025-01-15T10:00:00Z',
+    owner: { avatar_url: 'https://avatars.githubusercontent.com/u/123', login: 'anthropics' },
+  },
+  {
+    id: 2,
+    name: 'anthropic-sdk-python',
+    full_name: 'anthropics/anthropic-sdk-python',
+    description: 'Python SDK',
+    html_url: 'https://github.com/anthropics/anthropic-sdk-python',
+    language: 'Python',
+    stargazers_count: 800,
+    forks_count: 90,
+    watchers_count: 800,
+    open_issues_count: 10,
+    updated_at: '2025-02-20T14:30:00Z',
+    owner: { avatar_url: 'https://avatars.githubusercontent.com/u/456', login: 'anthropics' },
+  },
+  {
+    id: 3,
+    name: 'anthropic-sdk-typescript',
+    full_name: 'anthropics/anthropic-sdk-typescript',
+    description: 'TypeScript SDK',
+    html_url: 'https://github.com/anthropics/anthropic-sdk-typescript',
+    language: 'TypeScript',
+    stargazers_count: 600,
+    forks_count: 50,
+    watchers_count: 600,
+    open_issues_count: 5,
+    updated_at: '2025-03-10T08:00:00Z',
+    owner: { avatar_url: 'https://avatars.githubusercontent.com/u/789', login: 'anthropics' },
+  },
+  {
+    id: 4,
+    name: 'courses',
+    full_name: 'anthropics/courses',
+    description: 'Educational courses',
+    html_url: 'https://github.com/anthropics/courses',
+    language: null,
+    stargazers_count: 400,
+    forks_count: 30,
+    watchers_count: 400,
+    open_issues_count: 2,
+    updated_at: '2025-04-01T12:00:00Z',
+    owner: { avatar_url: 'https://avatars.githubusercontent.com/u/101', login: 'anthropics' },
+  },
+];
+
 function mockFetchSuccess(data: unknown) {
   vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
     ok: true,
@@ -56,6 +116,11 @@ function mockFetchHttpError(status: number) {
     status,
     json: () => Promise.resolve({}),
   } as Response);
+}
+
+async function openLanguageFilter() {
+  const trigger = await screen.findByRole('combobox', { name: /linguagem/i });
+  await userEvent.click(trigger);
 }
 
 afterEach(() => {
@@ -354,6 +419,83 @@ describe('RepoTable', () => {
         expect(links[0]).toHaveTextContent('claude-code');
         expect(links[1]).toHaveTextContent('anthropic-sdk-python');
       });
+    });
+  });
+
+  describe('language filter', () => {
+    it('renders dropdown with unique sorted languages', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+
+      await openLanguageFilter();
+
+      const options = screen.getAllByRole('option');
+      expect(options[0]).toHaveTextContent('Todas as linguagens');
+      expect(options[1]).toHaveTextContent('Python');
+      expect(options[2]).toHaveTextContent('TypeScript');
+      expect(options).toHaveLength(3);
+    });
+
+    it('filters repos when a language is selected', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+
+      await openLanguageFilter();
+      await userEvent.click(screen.getByRole('option', { name: /TypeScript/ }));
+
+      const rows = screen.getAllByRole('row');
+      // 1 header + 2 TypeScript repos = 3
+      expect(rows).toHaveLength(3);
+      expect(screen.getByText('claude-code')).toBeInTheDocument();
+      expect(screen.getByText('anthropic-sdk-typescript')).toBeInTheDocument();
+      expect(screen.queryByText('anthropic-sdk-python')).not.toBeInTheDocument();
+      expect(screen.queryByText('courses')).not.toBeInTheDocument();
+    });
+
+    it('shows all repos including null-language when "Todas" is selected', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+
+      // First filter by Python
+      await openLanguageFilter();
+      await userEvent.click(screen.getByRole('option', { name: /Python/ }));
+
+      // Then switch back to "Todas"
+      await openLanguageFilter();
+      await userEvent.click(screen.getByRole('option', { name: /Todas as linguagens/ }));
+
+      const rows = screen.getAllByRole('row');
+      // 1 header + 4 repos = 5
+      expect(rows).toHaveLength(5);
+      expect(screen.getByText('courses')).toBeInTheDocument();
+    });
+
+    it('updates footer count when filter is active', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+
+      await openLanguageFilter();
+      await userEvent.click(screen.getByRole('option', { name: /Python/ }));
+
+      expect(screen.getByText(/Mostrando 1 de 4 repositorios/)).toBeInTheDocument();
+    });
+
+    it('shows empty state and filter with only "Todas" when API returns empty list', async () => {
+      mockFetchSuccess([]);
+      render(<RepoTable />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Nenhum repositorio encontrado.')).toBeInTheDocument();
+      });
+      expect(screen.getByRole('combobox', { name: /linguagem/i })).toBeInTheDocument();
+      expect(screen.getByText(/Mostrando 0 de 0 repositorios/)).toBeInTheDocument();
+    });
+
+    it('does not render the filter during loading', () => {
+      vi.spyOn(globalThis, 'fetch').mockReturnValueOnce(new Promise(() => {}));
+      render(<RepoTable />);
+
+      expect(screen.queryByRole('combobox', { name: /linguagem/i })).not.toBeInTheDocument();
     });
   });
 });
