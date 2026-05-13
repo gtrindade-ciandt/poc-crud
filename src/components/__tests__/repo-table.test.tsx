@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RepoTable } from '@/components/repo-table';
@@ -416,6 +416,159 @@ describe('RepoTable', () => {
         expect(links[0]).toHaveTextContent('claude-code');
         expect(links[1]).toHaveTextContent('anthropic-sdk-python');
       });
+    });
+  });
+
+  describe('name search', () => {
+    it('renders search input with placeholder "Buscar repositorio..."', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      expect(screen.getByPlaceholderText('Buscar repositorio...')).toBeInTheDocument();
+    });
+
+    it('shows all repos immediately when typing before debounce fires', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      fireEvent.change(input, { target: { value: 'claude' } });
+
+      // Before the 300ms debounce fires, all repos must still be visible
+      expect(screen.getByText('claude-code')).toBeInTheDocument();
+      expect(screen.getByText('anthropic-sdk-python')).toBeInTheDocument();
+    });
+
+    it('filters repos by name after 300ms debounce fires', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      fireEvent.change(input, { target: { value: 'claude' } });
+
+      await waitFor(() => {
+        expect(screen.queryByText('anthropic-sdk-python')).not.toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      expect(screen.getByText('claude-code')).toBeInTheDocument();
+      expect(screen.queryByText('courses')).not.toBeInTheDocument();
+    });
+
+    it('filters repos by description after debounce fires', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      // 'CLI tool' matches claude-code's description, not its name
+      fireEvent.change(input, { target: { value: 'CLI tool' } });
+
+      await waitFor(() => {
+        expect(screen.queryByText('anthropic-sdk-python')).not.toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      expect(screen.getByText('claude-code')).toBeInTheDocument();
+      expect(screen.queryByText('courses')).not.toBeInTheDocument();
+    });
+
+    it('shows all repos when search input is cleared', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      fireEvent.change(input, { target: { value: 'claude' } });
+
+      await waitFor(() => {
+        expect(screen.queryByText('anthropic-sdk-python')).not.toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      fireEvent.change(input, { target: { value: '' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('anthropic-sdk-python')).toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      const rows = screen.getAllByRole('row');
+      expect(rows).toHaveLength(5); // 1 header + 4 repos
+    });
+
+    it('does not crash when a repo has null description', async () => {
+      // mockRepos[1] (anthropic-sdk-python) has description: null
+      // Searching 'cli' matches claude-code by description; anthropic-sdk-python must be excluded
+      // without throwing (null?.toLowerCase().includes(term) ?? false)
+      mockFetchSuccess(mockRepos);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      fireEvent.change(input, { target: { value: 'cli' } });
+
+      // Wait for debounce to fire and the null-description repo to disappear
+      await waitFor(() => {
+        expect(screen.queryByText('anthropic-sdk-python')).not.toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      expect(screen.getByText('claude-code')).toBeInTheDocument();
+    });
+
+    it('applies search on top of active language filter', async () => {
+      // Filter first, then search — search should narrow within filtered set
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      await openLanguageFilter();
+      await userEvent.click(screen.getByRole('option', { name: /TypeScript/ }));
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      fireEvent.change(input, { target: { value: 'claude' } });
+
+      await waitFor(() => {
+        expect(screen.queryByText('anthropic-sdk-typescript')).not.toBeInTheDocument();
+      }, { timeout: 1000 });
+
+      expect(screen.getByText('claude-code')).toBeInTheDocument();
+      expect(screen.queryByText('anthropic-sdk-python')).not.toBeInTheDocument();
+    });
+
+    it('narrows search results when language filter is applied after searching', async () => {
+      // Search first, then filter — language filter should narrow the search results
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      // 'sdk' matches both Python and TypeScript SDK repos
+      fireEvent.change(input, { target: { value: 'sdk' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('anthropic-sdk-python')).toBeInTheDocument();
+      }, { timeout: 1000 });
+      expect(screen.getByText('anthropic-sdk-typescript')).toBeInTheDocument();
+
+      // Now filter to Python only — TypeScript SDK should disappear
+      await openLanguageFilter();
+      await userEvent.click(screen.getByRole('option', { name: /Python/ }));
+
+      expect(screen.getByText('anthropic-sdk-python')).toBeInTheDocument();
+      expect(screen.queryByText('anthropic-sdk-typescript')).not.toBeInTheDocument();
+    });
+
+    it('updates footer count to reflect search results', async () => {
+      mockFetchSuccess(mockReposWithLanguages);
+      render(<RepoTable />);
+      await screen.findByText('claude-code');
+
+      const input = screen.getByPlaceholderText('Buscar repositorio...');
+      fireEvent.change(input, { target: { value: 'claude' } });
+
+      await waitFor(() => {
+        expect(screen.getByText(/Mostrando 1 de 4 repositorios/)).toBeInTheDocument();
+      }, { timeout: 1000 });
     });
   });
 

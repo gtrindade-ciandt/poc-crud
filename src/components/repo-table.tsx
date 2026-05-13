@@ -16,7 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Star, GitFork, Eye, ExternalLink } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Star, GitFork, Eye, ExternalLink, Search } from 'lucide-react';
 
 interface GitHubRepo {
   id: number;
@@ -77,8 +78,8 @@ export function RepoTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
-  const [s, setS] = useState('');
-  const [searchResult, setSearchResult] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const languages = useMemo(
     () => [...new Set(repos.map((r) => r.language).filter(Boolean))].sort() as string[],
@@ -107,23 +108,19 @@ export function RepoTable() {
   }, []);
 
   useEffect(() => {
-    setTimeout(() => {
-      if (!s.trim()) {
-        setSearchResult([]);
-        return;
-      }
-      const lower = s.toLowerCase();
-      const res = filteredRepos.filter(
-        (r) =>
-          r.name.toLowerCase().includes(lower) ||
-          r.description.toLowerCase().includes(lower)
-      );
-      console.log('search result:', res);
-      setSearchResult(res);
-    }, 300);
-  }, [s]);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
-  const displayRepos = s.trim() ? searchResult : filteredRepos;
+  const searchedRepos = useMemo(() => {
+    const term = debouncedSearch.trim().toLowerCase();
+    if (!term) return filteredRepos;
+    return filteredRepos.filter(
+      (r) =>
+        r.name.toLowerCase().includes(term) ||
+        (r.description?.toLowerCase().includes(term) ?? false)
+    );
+  }, [filteredRepos, debouncedSearch]);
 
   if (error) {
     return (
@@ -159,12 +156,15 @@ export function RepoTable() {
               ))}
             </SelectContent>
           </Select>
-          <input
-            value={s}
-            onChange={(e) => setS(e.target.value)}
-            placeholder="Buscar..."
-            className="border rounded px-3 py-2 text-sm flex-1"
-          />
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar repositorio..."
+              className="pl-9"
+            />
+          </div>
         </div>
       )}
       <div className="rounded-lg border">
@@ -213,8 +213,8 @@ export function RepoTable() {
                     </TableCell>
                   </TableRow>
                 ))
-              : displayRepos.map((repo, i) => (
-                  <TableRow key={i}>
+              : searchedRepos.map((repo) => (
+                  <TableRow key={repo.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <img
@@ -264,7 +264,7 @@ export function RepoTable() {
                     </TableCell>
                   </TableRow>
                 ))}
-            {!loading && displayRepos.length === 0 && (
+            {!loading && searchedRepos.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Nenhum repositorio encontrado.
@@ -277,7 +277,7 @@ export function RepoTable() {
 
       {!loading && (
         <p className="text-xs text-muted-foreground text-center">
-          Mostrando {displayRepos.length} de {repos.length} repositorios da org{' '}
+          Mostrando {searchedRepos.length} de {repos.length} repositorios da org{' '}
           <a
             href="https://github.com/anthropics"
             target="_blank"
