@@ -76,8 +76,10 @@ export function RepoTable() {
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  // bad: variavel ilegivel, tipo any[], estado duplicado (devia ser useMemo)
+  const [s, setS] = useState('');
+  const [searchResult, setSearchResult] = useState<any[]>([]);
 
   const languages = useMemo(
     () => [...new Set(repos.map((r) => r.language).filter(Boolean))].sort() as string[],
@@ -105,6 +107,27 @@ export function RepoTable() {
       });
   }, []);
 
+  // bad: sem clearTimeout (memory leak), sem filteredRepos no dep array (stale closure),
+  // description sem null check (crash), console.log esquecido
+  useEffect(() => {
+    setTimeout(() => {
+      if (!s.trim()) {
+        setSearchResult([]);
+        return;
+      }
+      const lower = s.toLowerCase();
+      const res = filteredRepos.filter(
+        (r) =>
+          r.name.toLowerCase().includes(lower) ||
+          r.description.toLowerCase().includes(lower) // crash quando description === null
+      );
+      console.log('search result:', res);
+      setSearchResult(res);
+    }, 300); // magic number, sem clearTimeout
+  }, [s]); // filteredRepos faltando no dep array
+
+  const displayRepos = s.trim() ? searchResult : filteredRepos;
+
   if (error) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
@@ -117,27 +140,36 @@ export function RepoTable() {
   return (
     <div className="space-y-4">
       {!loading && !error && (
-        <Select
-          value={selectedLanguage ?? 'all'}
-          onValueChange={(value) => setSelectedLanguage(value === 'all' ? null : value)}
-        >
-          <SelectTrigger className="w-full sm:w-[220px]" aria-label="Filtrar por linguagem">
-            <SelectValue placeholder="Todas as linguagens" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as linguagens</SelectItem>
-            {languages.map((lang) => (
-              <SelectItem key={lang} value={lang}>
-                <span className="flex items-center gap-2">
-                  <span
-                    className={`h-2 w-2 rounded-full ${languageColors[lang] || 'bg-gray-400'}`}
-                  />
-                  {lang}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select
+            value={selectedLanguage ?? 'all'}
+            onValueChange={(value) => setSelectedLanguage(value === 'all' ? null : value)}
+          >
+            <SelectTrigger className="w-full sm:w-[220px]" aria-label="Filtrar por linguagem">
+              <SelectValue placeholder="Todas as linguagens" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as linguagens</SelectItem>
+              {languages.map((lang) => (
+                <SelectItem key={lang} value={lang}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full ${languageColors[lang] || 'bg-gray-400'}`}
+                    />
+                    {lang}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {/* bad: input nativo em vez do componente Input do shadcn, placeholder errado */}
+          <input
+            value={s}
+            onChange={(e) => setS(e.target.value)}
+            placeholder="Buscar..."
+            className="border rounded px-3 py-2 text-sm flex-1"
+          />
+        </div>
       )}
       <div className="rounded-lg border">
         <Table>
@@ -185,8 +217,8 @@ export function RepoTable() {
                     </TableCell>
                   </TableRow>
                 ))
-              : filteredRepos.map((repo) => (
-                  <TableRow key={repo.id}>
+              : displayRepos.map((repo, i) => ( // bad: index como key
+                  <TableRow key={i}>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <img
@@ -236,7 +268,7 @@ export function RepoTable() {
                     </TableCell>
                   </TableRow>
                 ))}
-            {!loading && filteredRepos.length === 0 && (
+            {!loading && displayRepos.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                   Nenhum repositorio encontrado.
@@ -249,7 +281,7 @@ export function RepoTable() {
 
       {!loading && (
         <p className="text-xs text-muted-foreground text-center">
-          Mostrando {filteredRepos.length} de {repos.length} repositorios da org{' '}
+          Mostrando {displayRepos.length} de {repos.length} repositorios da org{' '}
           <a
             href="https://github.com/anthropics"
             target="_blank"
