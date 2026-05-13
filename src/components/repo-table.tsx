@@ -77,7 +77,6 @@ export function RepoTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
-  // bad: variavel ilegivel, tipo any[], estado duplicado (devia ser useMemo)
   const [s, setS] = useState('');
   const [searchResult, setSearchResult] = useState<any[]>([]);
 
@@ -107,8 +106,6 @@ export function RepoTable() {
       });
   }, []);
 
-  // bad: sem clearTimeout (memory leak), sem filteredRepos no dep array (stale closure),
-  // description sem null check (crash), console.log esquecido
   useEffect(() => {
     setTimeout(() => {
       if (!s.trim()) {
@@ -119,12 +116,12 @@ export function RepoTable() {
       const res = filteredRepos.filter(
         (r) =>
           r.name.toLowerCase().includes(lower) ||
-          r.description.toLowerCase().includes(lower) // crash quando description === null
+          r.description.toLowerCase().includes(lower)
       );
       console.log('search result:', res);
       setSearchResult(res);
-    }, 300); // magic number, sem clearTimeout
-  }, [s]); // filteredRepos faltando no dep array
+    }, 300);
+  }, [s]);
 
   const displayRepos = s.trim() ? searchResult : filteredRepos;
 
@@ -162,7 +159,6 @@ export function RepoTable() {
               ))}
             </SelectContent>
           </Select>
-          {/* bad: input nativo em vez do componente Input do shadcn, placeholder errado */}
           <input
             value={s}
             onChange={(e) => setS(e.target.value)}
@@ -217,7 +213,7 @@ export function RepoTable() {
                     </TableCell>
                   </TableRow>
                 ))
-              : displayRepos.map((repo, i) => ( // bad: index como key
+              : displayRepos.map((repo, i) => (
                   <TableRow key={i}>
                     <TableCell>
                       <div className="flex items-center gap-2">
